@@ -6,7 +6,7 @@ SHELL := /bin/bash
 #    P R O D U C T I O N     C O M M A N D S
 # ----------------------------------------------------------------------------
 default: web
-run: build permissions
+run: build permissions web
 
 deploy: run
 	@echo
@@ -27,7 +27,7 @@ web:
 	@echo "------------------------------------------------------------------"
 	@echo "Running in production mode"
 	@echo "------------------------------------------------------------------"
-	@docker-compose -p $(PROJECT_ID) up -d web
+	@docker-compose -p $(PROJECT_ID) up -d geonode
 	@# Dont confuse this with the dbbackup make command below
 	@# This one runs the postgis-backup cron container
 	@# We add --no-recreate so that it does not destroy & recreate the db container
