@@ -5,8 +5,8 @@ SHELL := /bin/bash
 # ----------------------------------------------------------------------------
 #    P R O D U C T I O N     C O M M A N D S
 # ----------------------------------------------------------------------------
-default: geonode
-run: geonode permissions
+default: web
+run: web permissions
 
 deploy: run
 	@echo
@@ -22,7 +22,7 @@ build:
 	@echo "------------------------------------------------------------------"
 	@docker-compose -p $(PROJECT_ID) build geonode
 
-geonode:
+web:
 	@echo
 	@echo "------------------------------------------------------------------"
 	@echo "Running in production mode"

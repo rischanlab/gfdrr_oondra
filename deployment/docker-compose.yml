@@ -1,3 +1,28 @@
+nginx:
+  # Note you cannot scale if you use conteiner_name
+  container_name: oondra-nginx
+  image: nginx
+  hostname: nginx
+  volumes:
+    - ./nginx-conf:/etc/nginx/conf.d
+  ports:
+    - "0.0.0.0:80:80"
+  restart: on-failure:5
+
+web:
+  # Note you cannot scale if you use conteiner_name
+  container_name: oondra-web
+  image: nginx
+  hostname: nginx
+  volumes:
+    - ./sites-enabled:/etc/nginx/conf.d:ro
+    - ./logs:/var/log/nginx
+  links:
+    - geonode:geonode
+  ports:
+    - "68888:8080"
+  restart: on-failure:5
+
 db:
   image: kartoza/postgis:9.4-2.1
   container_name: gfdrr_geonode-db
