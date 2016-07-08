@@ -6,7 +6,7 @@ nginx:
   volumes:
     - ./nginx-conf:/etc/nginx/conf.d
   ports:
-    - "0.0.0.0:80:80"
+    - "0.0.0.0:85:80"
   links:
     - geonode
   restart: on-failure:5
