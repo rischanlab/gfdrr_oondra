@@ -22,7 +22,7 @@ db:
     - USERNAME=docker
     - PASS=docker
   ports:
-    - "6003:5432"
+    - "6113:5432"
 
 dbbackups:
   container_name: gfdrr_oondra-db-backup
