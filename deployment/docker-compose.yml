@@ -1,20 +1,6 @@
-nginx:
-  # Note you cannot scale if you use conteiner_name
-  container_name: gfdrr_geonode-nginx
-  image: nginx
-  hostname: nginx
-  volumes:
-    - ./nginx-conf:/etc/nginx/conf.d
-  ports:
-    - "0.0.0.0:85:80"
-  links:
-    - geonode
-  restart: on-failure:5
-
-
 db:
   image: kartoza/postgis:9.4-2.1
-  container_name: gfdrr_oondra-geonode-db
+  container_name: gfdrr_oondra-db
   hostname: geonode-db
   volumes:
     - ./pg/postgres_data:/var/lib/postgresql
@@ -24,37 +10,28 @@ db:
   ports:
     - "6113:5432"
 
-dbbackups:
-  container_name: gfdrr_oondra-db-backup
-  image: kartoza/pg-backup:9.4
-  hostname: pg-backups
-  volumes:
-    - ./backups:/backups
-  links:
-    - db:db
-  environment:
-    - DUMPPREFIX=PG_gfdrr
-    - PGUSER=docker
-    - PGPASSWORD=docker
-    - PGPORT=5432
-    - PGHOST=db
-    - PGDATABASE=gis
-  restart: on-failure:5
-
 geonode:
+  build: docker-geonode
   container_name: gfdrr_oondra-geonode
   hostname: geonode
-  image: kartoza/geonode
+  volumes:
+    - ./logs:/var/log/
+    - ./geoserver_data:/geonode/geoserver/data
   ports:
     - "8111:8000"
     - "8181:8080"
+  links:
+    - db:db
+  external_links:
+    - dockerosm_db:dockerosm_db
   environment:
     - DATABASE_NAME=gis
     - DATABASE_USERNAME=docker
     - DATABASE_PASSWORD=docker
     - DATABASE_HOST=db
-  links:
-    - db:db
-
-
-
+    # osm-db links
+    - USER=docker
+    - PASSWORD=docker
+    - PORT=5432
+    - HOST=dockerosm_db  
+    - DATABASE=gis
