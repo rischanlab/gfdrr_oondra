@@ -16,3 +16,9 @@ GFDRR Challenge Online Operational Natural Disaster Risk Assessment platform
 * Back to deployment directory.
 * Run `make run` to start geonode container
 
+### Now, I have added docker-osm container inside the gfdrr's docker-compose file. 
+* Extract the docker-osm repo inside the gfdrr directory
+* Use this docker-osm repo (https://github.com/rischanlab/docker-osm)[https://github.com/rischanlab/docker-osm]. I have modified this repo to our purpose. 
+
+
+
