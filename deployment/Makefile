@@ -1,80 +1,112 @@
-PROJECT_ID := gfdrr_oondra
+PROJECT_ID := gfdrr
+COMPOSE_FILE := docker-compose.yml
 
-SHELL := /bin/bash
-
-# ----------------------------------------------------------------------------
-#    P R O D U C T I O N     C O M M A N D S
-# ----------------------------------------------------------------------------
-default: web
-run: build permissions web
-
-deploy: run
-	@echo
-	@echo "------------------------------------------------------------------"
-	@echo "Bringing up fresh instance "
-	@echo "You can access it on http://0.0.0.0:8111"
-	@echo "------------------------------------------------------------------"
 
 build:
 	@echo
 	@echo "------------------------------------------------------------------"
 	@echo "Building in production mode"
 	@echo "------------------------------------------------------------------"
-	@docker-compose -p $(PROJECT_ID) build geonode
+	@docker-compose -f $(COMPOSE_FILE) -p $(PROJECT_ID) build
 
-web:
+run:
 	@echo
 	@echo "------------------------------------------------------------------"
 	@echo "Running in production mode"
 	@echo "------------------------------------------------------------------"
-	@docker-compose -p $(PROJECT_ID) up -d geonode
-	@# Dont confuse this with the dbbackup make command below
-	@# This one runs the postgis-backup cron container
-	@# We add --no-recreate so that it does not destroy & recreate the db container
-	
+	@docker-compose -f $(COMPOSE_FILE) -p $(PROJECT_ID) up -d --no-recreate
 
-permissions:
-	# Probably we want something more granular here....
-	# Your sudo password will be needed to set the file permissions
-	# on logs, media, static and pg dirs
-	@if [ ! -d "logs" ]; then mkdir logs; fi
-	@if [ ! -d "pg" ]; then mkdir pg; fi
-	@if [ ! -d "geoserver_data" ]; then mkdir geoserver_data; fi
-	@if [ ! -d "backups" ]; then mkdir backups; fi
-	@if [ -d "logs" ]; then sudo chmod -R a+rwx logs; fi
-	@if [ -d "geoserver_data" ]; then sudo chmod -R a+rwx geoserver_data; fi
-	@if [ -d "pg" ]; then sudo chmod -R a+rwx pg; fi
-	@if [ -d "backups" ]; then sudo chmod -R a+rwx backups; fi
-
-db:
+rundev:
 	@echo
 	@echo "------------------------------------------------------------------"
-	@echo "Running db in production mode"
+	@echo "Running in DEVELOPMENT mode"
 	@echo "------------------------------------------------------------------"
-	@docker-compose -p $(PROJECT_ID) up -d db
+	@docker-compose -f $(COMPOSE_FILE) -p $(PROJECT_ID) up
 
+stop:
+	@echo
+	@echo "------------------------------------------------------------------"
+	@echo "Stopping in production mode"
+	@echo "------------------------------------------------------------------"
+	@docker-compose -f $(COMPOSE_FILE) -p $(PROJECT_ID) stop
 
 kill:
 	@echo
 	@echo "------------------------------------------------------------------"
 	@echo "Killing in production mode"
 	@echo "------------------------------------------------------------------"
-	@docker-compose -p $(PROJECT_ID) kill
+	@docker-compose -f $(COMPOSE_FILE) -p $(PROJECT_ID) kill
 
-
-
-dblogs:
+rm: kill
 	@echo
 	@echo "------------------------------------------------------------------"
-	@echo "Showing db logs in production mode"
+	@echo "Removing production instance!!! "
 	@echo "------------------------------------------------------------------"
-	@docker-compose -p $(PROJECT_ID) logs db
+	@docker-compose -f $(COMPOSE_FILE) -p $(PROJECT_ID) rm
 
+ipdb:
+	@echo
+	@echo "------------------------------------------------------------------"
+	@echo "Database's IP"
+	@echo "------------------------------------------------------------------"
+	@docker inspect $(PROJECT_ID)_dbosm | grep '"IPAddress"' | head -1 | cut -d '"' -f 4
 
+import_clip:
+	@echo
+	@echo "------------------------------------------------------------------"
+	@echo "Importing clip shapefile"
+	@echo "------------------------------------------------------------------"
+	@docker exec -t -i $(PROJECT_ID)_dbosm /usr/bin/shp2pgsql -c -I -D -s 4326 /home/settings/clip/clip.shp | docker exec -i $(PROJECT_ID)_dbosm su - postgres -c "psql gis"
 
-dbshell:
+remove_clip:
+	@echo
+	@echo "------------------------------------------------------------------"
+	@echo "Removing clip shapefile"
+	@echo "------------------------------------------------------------------"
+	@docker exec -t -i $(PROJECT_ID)_dbosm /bin/su - postgres -c "psql gis -c 'DROP TABLE IF EXISTS clip;'"
+
+timestamp:
+	@echo
+	@echo "------------------------------------------------------------------"
+	@echo "Timestamp"
+	@echo "------------------------------------------------------------------"
+	@docker exec -t -i $(PROJECT_ID)_imposm cat /home/settings/timestamp.txt
+
+import_styles: remove_styles
+	@echo
+	@echo "------------------------------------------------------------------"
+	@echo "Importing QGIS styles"
+	@echo "------------------------------------------------------------------"
+	@docker exec -i $(PROJECT_ID)_dbosm su - postgres -c "psql -f /home/settings/qgis_style.sql gis"
+
+remove_styles:
+	@echo
+	@echo "------------------------------------------------------------------"
+	@echo "Removing QGIS styles"
+	@echo "------------------------------------------------------------------"
+	@docker exec -t -i $(PROJECT_ID)_dbosm /bin/su - postgres -c "psql gis -c 'DROP TABLE IF EXISTS layer_styles;'"
+
+backup_styles:
+	@echo
+	@echo "------------------------------------------------------------------"
+	@echo "Backup QGIS styles to BACKUP.sql"
+	@echo "------------------------------------------------------------------"
+	@echo "SET XML OPTION DOCUMENT;" > BACKUP-STYLES.sql
+	@ docker exec -t $(PROJECT_ID)_dbosm su - postgres -c "/usr/bin/pg_dump --format plain --inserts --table public.layer_styles gis" >> BACKUP-STYLES.sql
+	
+dbshellgfdrr:
 	@echo
 	@echo "------------------------------------------------------------------"
 	@echo "Shelling in in production database"
 	@echo "------------------------------------------------------------------"
-	@docker exec -t -i $(PROJECT_ID)-db psql -U docker -h localhost gis
+	@docker exec -t -i $(PROJECT_ID)_oondra-dbgfdrr psql -U docker -h localhost gis
+
+dbshellosm:
+	@echo
+	@echo "------------------------------------------------------------------"
+	@echo "Shelling in in production database"
+	@echo "------------------------------------------------------------------"
+	@docker exec -t -i $(PROJECT_ID)_dbosm psql -U docker -h localhost gis
+
+
+
