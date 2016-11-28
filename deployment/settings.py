@@ -59,7 +59,6 @@ DATABASES = {
         'PORT': 5432,
     }
 }
-
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
 # although not all choices may be available on all operating systems.
@@ -150,7 +149,7 @@ MEDIA_ROOT = os.path.join(PROJECT_ROOT, "uploaded")
 # URL that handles the media served from MEDIA_ROOT. Make sure to use a
 # trailing slash if there is a path component (optional in other cases).
 # Examples: "http://media.lawrence.com", "http://example.com/media/"
-MEDIA_URL = "/uploaded/"
+MEDIA_URL = LOCAL_MEDIA_URL = "/uploaded/"
 
 # Absolute path to the directory that holds static files like app media.
 # Example: "/home/media/media.lawrence.com/apps/"
@@ -251,9 +250,9 @@ GEONODE_CONTRIB_APPS = (
 # GEONODE_APPS = GEONODE_APPS + GEONODE_CONTRIB_APPS
 
 INSTALLED_APPS = (
-    
+
     'modeltranslation',
-    
+
     # Boostrap admin theme
     # 'django_admin_bootstrapped.bootstrap3',
     # 'django_admin_bootstrapped',
@@ -284,6 +283,7 @@ INSTALLED_APPS = (
     'mptt',
     #'modeltranslation',
     'djcelery',
+    'storages',
 
     # Theme
     "pinax_theme_bootstrap_account",
@@ -302,7 +302,7 @@ INSTALLED_APPS = (
     'tastypie',
     'polymorphic',
     'guardian',
-    
+
 ) + GEONODE_APPS
 
 LOGGING = {
@@ -470,7 +470,7 @@ NOSE_ARGS = [
 #
 
 SITEURL = "http://localhost:8000/"
-
+CITEURL = "http://staging.oondra.kartoza.com/"
 USE_QUEUE = False
 
 DEFAULT_WORKSPACE = 'geonode'
@@ -496,7 +496,7 @@ OGC_SERVER = {
         # PUBLIC_LOCATION needs to be kept like this because in dev mode
         # the proxy won't work and the integration tests will fail
         # the entire block has to be overridden in the local_settings
-        'PUBLIC_LOCATION': 'http://localhost:8181/geoserver/',
+        'PUBLIC_LOCATION': 'http://staging.oondra.kartoza.com:8181/geoserver/',
         'USER': 'admin',
         'PASSWORD': 'geoserver',
         'MAPFISH_PRINT_ENABLED': True,
@@ -506,7 +506,7 @@ OGC_SERVER = {
         'WMST_ENABLED': False,
         'BACKEND_WRITE_ENABLED': True,
         'WPS_ENABLED': False,
-        'LOG_FILE': '%s/geoserver/data/logs/geoserver.log' % os.path.abspath(os.path.join(PROJECT_ROOT, os.pardir)),
+        'LOG_FILE': '/var/log/geoserver.log' ,
         # Set to name of database in DATABASES dictionary to enable
         'DATASTORE': '',  # 'datastore',
         'TIMEOUT': 10  # number of seconds to allow for HTTP requests
@@ -537,7 +537,7 @@ CATALOGUE = {
         # 'ENGINE': 'geonode.catalogue.backends.generic',
 
         # The FULLY QUALIFIED base url to the CSW instance for this GeoNode
-        'URL': '%scatalogue/csw' % SITEURL,
+        'URL': '%scatalogue/csw' % CITEURL,
         # 'URL': 'http://localhost:8080/geonetwork/srv/en/csw',
         # 'URL': 'http://localhost:8080/deegree-csw-demo-3.0.4/services',
 
@@ -566,7 +566,7 @@ PYCSW = {
             'identification_fees': 'None',
             'identification_accessconstraints': 'None',
             'provider_name': 'Organization Name',
-            'provider_url': SITEURL,
+            'provider_url': CITEURL,
             'contact_name': 'Lastname, Firstname',
             'contact_position': 'Position Title',
             'contact_address': 'Mailing Address',
@@ -610,6 +610,13 @@ DEFAULT_MAP_CENTER = (0, 0)
 # maximum zoom is between 12 and 15 (for Google Maps, coverage varies by area)
 DEFAULT_MAP_ZOOM = 0
 
+ALT_OSM_BASEMAPS = os.environ.get('ALT_OSM_BASEMAPS', False)
+CARTODB_BASEMAPS = os.environ.get('CARTODB_BASEMAPS', False)
+STAMEN_BASEMAPS = os.environ.get('STAMEN_BASEMAPS', False)
+THUNDERFOREST_BASEMAPS = os.environ.get('THUNDERFOREST_BASEMAPS', False)
+MAPBOX_ACCESS_TOKEN = os.environ.get('MAPBOX_ACCESS_TOKEN', None)
+BING_API_KEY = os.environ.get('BING_API_KEY', None)
+
 MAP_BASELAYERS = [{
     "source": {"ptype": "gxp_olsource"},
     "type": "OpenLayers.Layer",
@@ -621,22 +628,9 @@ MAP_BASELAYERS = [{
     "source": {"ptype": "gxp_osmsource"},
     "type": "OpenLayers.Layer.OSM",
     "name": "mapnik",
-    "visibility": False,
+    "visibility": True,
     "fixed": True,
     "group": "background"
-}, {
-    "source": {"ptype": "gxp_mapquestsource"},
-    "name": "osm",
-    "group": "background",
-    "visibility": True
-}, {
-    "source": {"ptype": "gxp_mapquestsource"},
-    "name": "naip",
-    "group": "background",
-    "visibility": False
-}, 
-{
-    "source": {"ptype": "gxp_mapboxsource"},
 }]
 
 SOCIAL_BUTTONS = True
@@ -878,6 +872,32 @@ CELERY_QUEUES = [
     Queue('email', routing_key='email'),
 ]
 
+
+# AWS S3 Settings
+
+S3_STATIC_ENABLED = os.environ.get('S3_STATIC_ENABLED', False)
+S3_MEDIA_ENABLED = os.environ.get('S3_MEDIA_ENABLED', False)
+
+# Required to run Sync Media to S3
+AWS_BUCKET_NAME = os.environ.get('S3_BUCKET_NAME', '')
+
+AWS_STORAGE_BUCKET_NAME = os.environ.get('S3_BUCKET_NAME', '')
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID', '')
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', '')
+AWS_S3_BUCKET_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
+
+AWS_QUERYSTRING_AUTH = False
+
+if S3_STATIC_ENABLED:
+    STATICFILES_LOCATION = 'static'
+    STATICFILES_STORAGE = 'storages.backends.s3boto.S3BotoStorage'
+    STATIC_URL = "https://%s/%s/" % (AWS_S3_BUCKET_DOMAIN, STATICFILES_LOCATION)
+
+if S3_MEDIA_ENABLED:
+    MEDIAFILES_LOCATION = 'media'
+    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto.S3BotoStorage'
+    MEDIA_URL = "https://%s/%s/" % (AWS_S3_BUCKET_DOMAIN, MEDIAFILES_LOCATION)
+
 import djcelery
 djcelery.setup_loader()
 
@@ -887,20 +907,10 @@ try:
 except ImportError:
     pass
 
+# Load additonal basemaps, see geonode/contrib/api_basemap/README.md 
 try:
-    BING_LAYER = {    
-        "source": {
-            "ptype": "gxp_bingsource",
-            "apiKey": BING_API_KEY
-        },
-        "name": "AerialWithLabels",
-        "fixed": True,
-        "visibility": False,
-        "group": "background"
-    }
-    MAP_BASELAYERS.append(BING_LAYER)
-except NameError:
-    #print "Not enabling BingMaps base layer as a BING_API_KEY is not defined in local_settings.py file."
+    from geonode.contrib.api_basemaps import *
+except ImportError:
     pass
 
 # Require users to authenticate before using Geonode
